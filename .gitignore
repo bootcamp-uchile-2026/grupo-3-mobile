@@ -1,2 +1,15 @@
-# Agrega aquí los archivos y directorios que no deben incorporarse al repositorio.
-# Adapta este archivo a las tecnologías elegidas por el equipo.
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
