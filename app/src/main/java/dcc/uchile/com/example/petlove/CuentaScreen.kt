@@ -1,16 +1,23 @@
+
 package dcc.uchile.com.example.petlove
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
@@ -29,7 +36,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -38,11 +44,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
-
+import androidx.compose.ui.unit.sp
 
 @Composable
-fun CuentaScreen() {
+fun CuentaScreen(
+    onNotificacionesClick: () -> Unit = {}
+) {
 
     var searchText by remember {
         mutableStateOf("")
@@ -52,83 +61,121 @@ fun CuentaScreen() {
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp)
+            .padding(
+                start = 16.dp,
+                end = 16.dp,
+                top = 4.dp,
+                bottom = 8.dp
+            )
     ) {
 
-        // --------------------------------
-        // X + BUSCADOR + CARRITO
-        // --------------------------------
-
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(44.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
 
-            // X
             IconButton(
-                onClick = {}
+                onClick = {},
+                modifier = Modifier.size(36.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,
-                    contentDescription = "Cerrar"
+                    contentDescription = "Cerrar",
+                    modifier = Modifier.size(20.dp)
                 )
             }
 
-            // BARRA DE BÚSQUEDA
-            OutlinedTextField(
-                value = searchText,
-                onValueChange = {
-                    searchText = it
-                },
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 4.dp),
-                placeholder = {
-                    Text("Buscar productos...")
-                },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = "Buscar"
-                    )
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(20.dp)
+            Spacer(
+                modifier = Modifier.width(4.dp)
             )
 
-            // CARRITO
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.outline,
+                        shape = RoundedCornerShape(8.dp)
+                    )
+                    .padding(horizontal = 12.dp),
+                contentAlignment = Alignment.CenterStart
+            ) {
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Buscar",
+                        modifier = Modifier.size(20.dp)
+                    )
+
+                    Spacer(
+                        modifier = Modifier.width(8.dp)
+                    )
+
+                    BasicTextField(
+                        value = searchText,
+                        onValueChange = {
+                            searchText = it
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        textStyle = TextStyle(
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        ),
+                        decorationBox = { innerTextField ->
+
+                            if (searchText.isEmpty()) {
+                                Text(
+                                    text = "Buscar productos...",
+                                    fontSize = 14.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                            innerTextField()
+                        }
+                    )
+                }
+            }
+
+            Spacer(
+                modifier = Modifier.width(6.dp)
+            )
+
             IconButton(
                 onClick = {
                     println("Abrir carrito")
-                }
+                },
+                modifier = Modifier.size(44.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.ShoppingCart,
-                    contentDescription = "Carrito"
+                    contentDescription = "Carrito",
+                    modifier = Modifier.size(22.dp)
                 )
             }
         }
 
         Spacer(
-            modifier = Modifier.size(20.dp)
+            modifier = Modifier.height(12.dp)
         )
-
-        // --------------------------------
-        // TÍTULO
-        // --------------------------------
 
         Text(
             text = "Mi cuenta",
-            style = MaterialTheme.typography.headlineLarge
+            style = MaterialTheme.typography.titleMedium
         )
 
         Spacer(
-            modifier = Modifier.size(16.dp)
+            modifier = Modifier.height(16.dp)
         )
-
-        // --------------------------------
-        // OPCIONES
-        // --------------------------------
 
         CuentaOption(
             icon = Icons.Default.AccountCircle,
@@ -147,7 +194,8 @@ fun CuentaScreen() {
 
         CuentaOption(
             icon = Icons.Default.Notifications,
-            title = "Notificaciones"
+            title = "Notificaciones",
+            onClick = onNotificacionesClick
         )
 
         CuentaOption(
@@ -187,15 +235,13 @@ fun CuentaScreen() {
     }
 }
 
-
-// ------------------------------------------
-// OPCIÓN DE CUENTA
-// ------------------------------------------
-
 @Composable
 fun CuentaOption(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
-    title: String
+    title: String,
+    onClick: () -> Unit = {
+        println("Seleccionado: $title")
+    }
 ) {
 
     Card(
@@ -203,7 +249,7 @@ fun CuentaOption(
             .fillMaxWidth()
             .padding(bottom = 8.dp)
             .clickable {
-                println("Seleccionado: $title")
+                onClick()
             },
         shape = RoundedCornerShape(12.dp)
     ) {
@@ -229,3 +275,5 @@ fun CuentaOption(
         }
     }
 }
+
+

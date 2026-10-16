@@ -1,3 +1,4 @@
+
 package dcc.uchile.com.example.petlove
 
 import android.os.Bundle
@@ -23,22 +24,31 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import dcc.uchile.com.example.petlove.ui.theme.PetLoveTheme
 
+data class RegistroHistorial(
+    val id: Long = System.nanoTime(),
+    val clinica: String,
+    val veterinario: String,
+    val fecha: String,
+    val descripcion: String
+)
 
 class MainActivity : ComponentActivity() {
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         enableEdgeToEdge()
 
         setContent {
@@ -49,58 +59,74 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-
 @Composable
 fun PetLoveApp() {
-
     val navController = rememberNavController()
-
     val navBackStackEntry by navController.currentBackStackEntryAsState()
-
     val currentRoute = navBackStackEntry?.destination?.route
 
+    val registrosHistorial = remember {
+        mutableStateListOf<RegistroHistorial>()
+    }
+
+    val rutasMascotas = listOf(
+        "mascotas",
+        "registrar_mascota",
+        "mi_mascota",
+        "historial_medico",
+        "agregar_historial_medico",
+        "historial",
+        "recordatorios",
+        "examenes_medicos",
+        "agregar_examen_medico",
+        "detalle_historial_medico/{registroId}",
+        "editar_historial_medico/{registroId}"
+    )
+
     Scaffold(
-
         bottomBar = {
-
             NavigationBar {
-
-                // INICIO
                 NavigationBarItem(
                     selected = currentRoute == "home",
                     onClick = {
-                        navController.navigate("home")
+                        navController.navigate("home") {
+                            launchSingleTop = true
+                            popUpTo("home") {
+                                inclusive = false
+                            }
+                        }
                     },
                     icon = {
                         Icon(
-                            imageVector = Icons.Default.Home,
+                            Icons.Default.Home,
                             contentDescription = "Inicio"
                         )
                     },
                     label = {
                         Text(
-                            text = "Inicio",
+                            "Inicio",
                             textAlign = TextAlign.Center,
                             maxLines = 1
                         )
                     }
                 )
 
-                // SERVICIO VETERINARIO
                 NavigationBarItem(
                     selected = currentRoute == "veterinario",
                     onClick = {
-                        navController.navigate("veterinario")
+                        navController.navigate("veterinario") {
+                            launchSingleTop = true
+                        }
                     },
                     icon = {
                         Icon(
-                            imageVector = Icons.Default.MedicalServices,
+                            Icons.Default.MedicalServices,
                             contentDescription = "Servicio Veterinario"
                         )
                     },
                     label = {
                         Text(
-                            text = "Servicio\nVeterinario",
+                            "Servicio\nVeterinario",
                             textAlign = TextAlign.Center,
                             maxLines = 2,
                             style = MaterialTheme.typography.labelSmall
@@ -108,42 +134,44 @@ fun PetLoveApp() {
                     }
                 )
 
-                // AGENDA
                 NavigationBarItem(
                     selected = currentRoute == "agenda",
                     onClick = {
-                        navController.navigate("agenda")
+                        navController.navigate("agenda") {
+                            launchSingleTop = true
+                        }
                     },
                     icon = {
                         Icon(
-                            imageVector = Icons.Default.CalendarMonth,
+                            Icons.Default.CalendarMonth,
                             contentDescription = "Agenda"
                         )
                     },
                     label = {
                         Text(
-                            text = "Agenda",
+                            "Agenda",
                             textAlign = TextAlign.Center,
                             maxLines = 1
                         )
                     }
                 )
 
-                // MIS MASCOTAS
                 NavigationBarItem(
-                    selected = currentRoute == "mascotas",
+                    selected = currentRoute in rutasMascotas,
                     onClick = {
-                        navController.navigate("mascotas")
+                        navController.navigate("mascotas") {
+                            launchSingleTop = true
+                        }
                     },
                     icon = {
                         Icon(
-                            imageVector = Icons.Default.Pets,
+                            Icons.Default.Pets,
                             contentDescription = "Mis Mascotas"
                         )
                     },
                     label = {
                         Text(
-                            text = "Mis Mascotas",
+                            "Mis Mascotas",
                             textAlign = TextAlign.Center,
                             maxLines = 1,
                             softWrap = false,
@@ -155,21 +183,22 @@ fun PetLoveApp() {
                     }
                 )
 
-                // CUENTA
                 NavigationBarItem(
                     selected = currentRoute == "cuenta",
                     onClick = {
-                        navController.navigate("cuenta")
+                        navController.navigate("cuenta") {
+                            launchSingleTop = true
+                        }
                     },
                     icon = {
                         Icon(
-                            imageVector = Icons.Default.Person,
+                            Icons.Default.Person,
                             contentDescription = "Cuenta"
                         )
                     },
                     label = {
                         Text(
-                            text = "Cuenta",
+                            "Cuenta",
                             textAlign = TextAlign.Center,
                             maxLines = 1
                         )
@@ -177,46 +206,278 @@ fun PetLoveApp() {
                 )
             }
         }
-
     ) { innerPadding ->
 
         NavHost(
             navController = navController,
             startDestination = "home",
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
         ) {
 
-            // INICIO
             composable("home") {
                 HomeScreen()
             }
 
-            // SERVICIO VETERINARIO
             composable("veterinario") {
                 ServicioVeterinarioScreen()
             }
 
-            // AGENDA
             composable("agenda") {
                 AgendaScreen()
             }
 
-            // MIS MASCOTAS
             composable("mascotas") {
-                MascotasScreen()
+                MascotasScreen(
+                    onAddMascota = {
+                        navController.navigate("registrar_mascota")
+                    }
+                )
             }
 
-            // CUENTA
-            composable("cuenta") {
-                CuentaScreen()
+            composable("registrar_mascota") {
+                RegistrarMascotaScreen(
+                    onBackClick = {
+                        navController.popBackStack()
+                    },
+                    onRegisterClick = {
+                        navController.navigate("mi_mascota") {
+                            popUpTo("registrar_mascota") {
+                                inclusive = true
+                            }
+                            launchSingleTop = true
+                        }
+                    }
+                )
             }
 
-            // HISTORIAL
+            composable("mi_mascota") {
+                MiMascotaScreen(
+                    onBackClick = {
+                        navController.popBackStack()
+                    },
+                    onNotificationsClick = {
+                        navController.navigate("notificaciones")
+                    },
+                    onHistorialClick = {
+                        navController.navigate("historial_medico")
+                    },
+                    onExamenesClick = {
+                        navController.navigate("examenes_medicos")
+                    }
+                )
+            }
+
+            composable("examenes_medicos") {
+                ExamenesMedicosScreen(
+                    onBackClick = {
+                        navController.popBackStack()
+                    },
+                    onAgregarClick = {
+                        navController.navigate("agregar_examen_medico")
+                    }
+                )
+            }
+
+            composable("agregar_examen_medico") {
+                AgregarExamenMedicoScreen(
+                    onBackClick = {
+                        navController.popBackStack()
+                    },
+                    onCancelarClick = {
+                        navController.popBackStack()
+                    },
+                    onAgregarClick = { _, _, _, _ ->
+                        navController.popBackStack()
+                    }
+                )
+            }
+
+            composable("historial_medico") {
+                HistorialMedicoScreen(
+                    registros = registrosHistorial,
+                    onBackClick = {
+                        navController.popBackStack()
+                    },
+                    onAgregarClick = {
+                        navController.navigate("agregar_historial_medico")
+                    },
+                    onFiltrosClick = {},
+                    onEliminarRegistro = { registro ->
+                        registrosHistorial.remove(registro)
+                    },
+                    onVerInformacion = { registro ->
+                        navController.navigate(
+                            "detalle_historial_medico/${registro.id}"
+                        )
+                    },
+                    onActualizarRegistro = { actualizado ->
+                        val indice = registrosHistorial.indexOfFirst {
+                            it.id == actualizado.id
+                        }
+
+                        if (indice != -1) {
+                            registrosHistorial[indice] = actualizado
+                        }
+                    },
+                    onEditarRegistro = { registro ->
+                        navController.navigate(
+                            "editar_historial_medico/${registro.id}"
+                        )
+                    }
+                )
+            }
+
+            composable("agregar_historial_medico") {
+                AgregarHistorialMedicoScreen(
+                    onBackClick = {
+                        navController.popBackStack()
+                    },
+                    onCancelarClick = {
+                        navController.popBackStack()
+                    },
+                    onAgregarClick = { clinica, veterinario, fecha, descripcion ->
+                        registrosHistorial.add(
+                            0,
+                            RegistroHistorial(
+                                clinica = clinica,
+                                veterinario = veterinario,
+                                fecha = fecha,
+                                descripcion = descripcion
+                            )
+                        )
+
+                        navController.popBackStack()
+                    }
+                )
+            }
+
             composable("historial") {
-                HistorialScreen()
+                HistorialMedicoScreen(
+                    registros = registrosHistorial,
+                    onBackClick = {
+                        navController.popBackStack()
+                    },
+                    onAgregarClick = {
+                        navController.navigate("agregar_historial_medico")
+                    },
+                    onFiltrosClick = {},
+                    onEliminarRegistro = { registro ->
+                        registrosHistorial.remove(registro)
+                    },
+                    onVerInformacion = { registro ->
+                        navController.navigate(
+                            "detalle_historial_medico/${registro.id}"
+                        )
+                    },
+                    onActualizarRegistro = { actualizado ->
+                        val indice = registrosHistorial.indexOfFirst {
+                            it.id == actualizado.id
+                        }
+
+                        if (indice != -1) {
+                            registrosHistorial[indice] = actualizado
+                        }
+                    },
+                    onEditarRegistro = { registro ->
+                        navController.navigate(
+                            "editar_historial_medico/${registro.id}"
+                        )
+                    }
+                )
             }
 
-            // RECORDATORIOS
+            composable(
+                route = "detalle_historial_medico/{registroId}",
+                arguments = listOf(
+                    navArgument("registroId") {
+                        type = NavType.LongType
+                    }
+                )
+            ) { backStackEntry ->
+
+                val registroId =
+                    backStackEntry.arguments?.getLong("registroId") ?: -1L
+
+                val registro = registrosHistorial.find {
+                    it.id == registroId
+                }
+
+                if (registro != null) {
+                    DetalleHistorialMedicoScreen(
+                        registro = registro,
+                        onBackClick = {
+                            navController.popBackStack()
+                        },
+                        onEditarClick = {
+                            navController.navigate(
+                                "editar_historial_medico/${registro.id}"
+                            )
+                        },
+                        onEliminarClick = {
+                            registrosHistorial.removeAll {
+                                it.id == registro.id
+                            }
+                            navController.popBackStack()
+                        }
+                    )
+                } else {
+                    Text("No se encontró el registro médico.")
+                }
+            }
+
+            composable(
+                route = "editar_historial_medico/{registroId}",
+                arguments = listOf(
+                    navArgument("registroId") {
+                        type = NavType.LongType
+                    }
+                )
+            ) { backStackEntry ->
+
+                val registroId =
+                    backStackEntry.arguments?.getLong("registroId") ?: -1L
+
+                val registro = registrosHistorial.find {
+                    it.id == registroId
+                }
+
+                if (registro != null) {
+                    EditarHistorialMedicoScreen(
+                        registro = registro,
+                        onBackClick = {
+                            navController.popBackStack()
+                        },
+                        onGuardarClick = { actualizado ->
+                            val indice = registrosHistorial.indexOfFirst {
+                                it.id == actualizado.id
+                            }
+
+                            if (indice != -1) {
+                                registrosHistorial[indice] = actualizado
+                            }
+
+                            navController.popBackStack()
+                        }
+                    )
+                } else {
+                    Text("No se encontró el registro médico.")
+                }
+            }
+
+            composable("cuenta") {
+                CuentaScreen(
+                    onNotificacionesClick = {
+                        navController.navigate("notificaciones")
+                    }
+                )
+            }
+
+            composable("notificaciones") {
+                NotificacionesScreen()
+            }
+
             composable("recordatorios") {
                 RecordatoriosScreen()
             }
@@ -224,85 +485,33 @@ fun PetLoveApp() {
     }
 }
 
-
-@Composable
-fun HistorialScreen() {
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-
-        Text(
-            text = "Historial",
-            style = MaterialTheme.typography.headlineLarge
-        )
-
-        Spacer(
-            modifier = Modifier.height(16.dp)
-        )
-
-        Text(
-            text = "Control veterinario",
-            style = MaterialTheme.typography.titleMedium
-        )
-
-        Text("Fecha: 10/08/2026")
-        Text("Motivo: Control general")
-        Text("Estado: Realizado")
-
-        Spacer(
-            modifier = Modifier.height(16.dp)
-        )
-
-        Text(
-            text = "Vacunación",
-            style = MaterialTheme.typography.titleMedium
-        )
-
-        Text("Fecha: 05/07/2026")
-        Text("Vacuna: Antirrábica")
-        Text("Estado: Realizado")
-    }
-}
-
-
 @Composable
 fun RecordatoriosScreen() {
-
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
     ) {
-
         Text(
             text = "Recordatorios",
             style = MaterialTheme.typography.headlineLarge
         )
 
-        Spacer(
-            modifier = Modifier.height(16.dp)
-        )
+        Spacer(modifier = Modifier.height(16.dp))
 
         Text(
             text = "Vacuna próxima",
             style = MaterialTheme.typography.titleMedium
         )
-
         Text("Firulais")
         Text("Fecha: 20/08/2026")
 
-        Spacer(
-            modifier = Modifier.height(16.dp)
-        )
+        Spacer(modifier = Modifier.height(16.dp))
 
         Text(
             text = "Control veterinario",
             style = MaterialTheme.typography.titleMedium
         )
-
         Text("Michi")
         Text("Fecha: 25/08/2026")
     }

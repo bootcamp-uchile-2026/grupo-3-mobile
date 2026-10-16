@@ -3,6 +3,7 @@ package dcc.uchile.com.example.petlove
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,15 +15,28 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -30,10 +44,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import java.time.YearMonth
+import java.time.format.TextStyle as JavaTextStyle
+import java.util.Locale
 
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AgendaScreen() {
 
@@ -41,82 +61,328 @@ fun AgendaScreen() {
         mutableStateOf<Int?>(null)
     }
 
-    // --------------------------------------------------
-    // DÍAS DEL CALENDARIO
-    // --------------------------------------------------
+    var selectedMonth by remember {
+        mutableStateOf(YearMonth.of(2026, 9))
+    }
 
-    val weeks = listOf(
-        listOf("", "", "", "", "", "1", "2"),
-        listOf("3", "4", "5", "6", "7", "8", "9"),
-        listOf("10", "11", "12", "13", "14", "15", "16"),
-        listOf("17", "18", "19", "20", "21", "22", "23"),
-        listOf("24", "25", "26", "27", "28", "29", "30"),
-        listOf("31", "", "", "", "", "", "")
-    )
+    var searchText by remember {
+        mutableStateOf("")
+    }
 
-    // Días que tienen una cita
-    val appointmentDays = setOf(29, 31)
+    var showFilterSheet by remember {
+        mutableStateOf(false)
+    }
+
+    var selectedFilters by remember {
+        mutableStateOf(setOf<String>())
+    }
+
+    val filterColor = Color(0xFFDD5A21)
+
+    val previousMonth = selectedMonth.minusMonths(1)
+    val nextMonth = selectedMonth.plusMonths(1)
+
+    val currentMonthName = selectedMonth.month
+        .getDisplayName(
+            JavaTextStyle.FULL,
+            Locale("es", "ES")
+        )
+        .replaceFirstChar { it.uppercase() }
+
+    val previousMonthName = previousMonth.month
+        .getDisplayName(
+            JavaTextStyle.SHORT,
+            Locale("es", "ES")
+        )
+        .replace(".", "")
+        .replaceFirstChar { it.uppercase() }
+
+    val nextMonthName = nextMonth.month
+        .getDisplayName(
+            JavaTextStyle.SHORT,
+            Locale("es", "ES")
+        )
+        .replace(".", "")
+        .replaceFirstChar { it.uppercase() }
+
+    val firstDayOfMonth = selectedMonth.atDay(1)
+
+    val firstDayOffset =
+        firstDayOfMonth.dayOfWeek.value - 1
+
+    val daysInMonth = selectedMonth.lengthOfMonth()
+
+    val totalCells =
+        firstDayOffset + daysInMonth
+
+    val numberOfWeeks =
+        (totalCells + 6) / 7
+
+    val weeks = mutableListOf<List<String>>()
+
+    var currentDay = 1
+
+    repeat(numberOfWeeks) {
+
+        val week = mutableListOf<String>()
+
+        repeat(7) { dayOfWeekIndex ->
+
+            val cellIndex =
+                weeks.size * 7 + dayOfWeekIndex
+
+            if (
+                cellIndex < firstDayOffset ||
+                currentDay > daysInMonth
+            ) {
+                week.add("")
+            } else {
+                week.add(currentDay.toString())
+                currentDay++
+            }
+        }
+
+        weeks.add(week)
+    }
+
+    val appointmentDays =
+        if (selectedMonth == YearMonth.of(2026, 8)) {
+            setOf(29, 31)
+        } else {
+            emptySet()
+        }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(
+                start = 16.dp,
+                end = 16.dp,
+                top = 4.dp,
+                bottom = 8.dp
+            )
     ) {
 
-        // --------------------------------------------------
-        // X PARA CERRAR LA AGENDA
-        // --------------------------------------------------
-
         IconButton(
-            onClick = {
-                // Por ahora no hace nada.
-                // Después podemos hacer que vuelva a Inicio.
-            },
-            modifier = Modifier.size(40.dp)
+            onClick = {},
+            modifier = Modifier.size(36.dp)
         ) {
 
             Icon(
                 imageVector = Icons.Default.Close,
-                contentDescription = "Cerrar agenda"
+                contentDescription = "Cerrar agenda",
+                modifier = Modifier.size(20.dp)
             )
+        }
+
+        Text(
+            text = "Mi Agenda",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        Spacer(
+            modifier = Modifier.height(6.dp)
+        )
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(44.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.outline,
+                        shape = RoundedCornerShape(8.dp)
+                    )
+                    .padding(
+                        horizontal = 12.dp
+                    ),
+                contentAlignment = Alignment.CenterStart
+            ) {
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Buscar",
+                        modifier = Modifier.size(20.dp)
+                    )
+
+                    Spacer(
+                        modifier = Modifier.width(8.dp)
+                    )
+
+                    BasicTextField(
+                        value = searchText,
+                        onValueChange = {
+                            searchText = it
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        textStyle = TextStyle(
+                            fontSize = 14.sp,
+                            color = MaterialTheme
+                                .colorScheme
+                                .onSurface
+                        ),
+                        decorationBox = { innerTextField ->
+
+                            if (searchText.isEmpty()) {
+
+                                Text(
+                                    text = "Buscar...",
+                                    fontSize = 14.sp,
+                                    color = MaterialTheme
+                                        .colorScheme
+                                        .onSurfaceVariant
+                                )
+                            }
+
+                            innerTextField()
+                        }
+                    )
+                }
+            }
+
+            Spacer(
+                modifier = Modifier.width(6.dp)
+            )
+
+            IconButton(
+                onClick = {
+                    showFilterSheet = true
+                },
+                modifier = Modifier
+                    .size(44.dp)
+                    .border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.outline,
+                        shape = RoundedCornerShape(8.dp)
+                    )
+            ) {
+
+                Icon(
+                    imageVector = Icons.Default.Tune,
+                    contentDescription = "Filtros",
+                    modifier = Modifier.size(19.dp)
+                )
+            }
         }
 
         Spacer(
             modifier = Modifier.height(8.dp)
         )
 
-        // --------------------------------------------------
-        // TÍTULO
-        // --------------------------------------------------
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(38.dp)
+                .border(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                    shape = RoundedCornerShape(6.dp)
+                ),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
 
-        Text(
-            text = "Mi Agenda",
-            style = MaterialTheme.typography.headlineLarge
-        )
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .clickable {
+
+                        selectedMonth =
+                            selectedMonth.minusMonths(1)
+
+                        selectedDay = null
+                    },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = "Mes anterior",
+                    modifier = Modifier.size(15.dp)
+                )
+
+                Spacer(
+                    modifier = Modifier.width(3.dp)
+                )
+
+                Text(
+                    text = previousMonthName,
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .weight(1.5f)
+                    .fillMaxHeight()
+                    .background(
+                        MaterialTheme.colorScheme.surfaceVariant
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+
+                Text(
+                    text = currentMonthName.uppercase(),
+                    style = MaterialTheme.typography.labelLarge,
+                    textAlign = TextAlign.Center
+                )
+            }
+
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .clickable {
+
+                        selectedMonth =
+                            selectedMonth.plusMonths(1)
+
+                        selectedDay = null
+                    },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+
+                Text(
+                    text = nextMonthName,
+                    style = MaterialTheme.typography.labelSmall
+                )
+
+                Spacer(
+                    modifier = Modifier.width(3.dp)
+                )
+
+                Icon(
+                    imageVector = Icons.Default.ArrowForward,
+                    contentDescription = "Mes siguiente",
+                    modifier = Modifier.size(15.dp)
+                )
+            }
+        }
 
         Spacer(
-            modifier = Modifier.height(8.dp)
+            modifier = Modifier.height(6.dp)
         )
-
-        // --------------------------------------------------
-        // MES
-        // --------------------------------------------------
-
-        Text(
-            text = "Agosto 2026",
-            style = MaterialTheme.typography.titleMedium
-        )
-
-        Spacer(
-            modifier = Modifier.height(20.dp)
-        )
-
-        // --------------------------------------------------
-        // DÍAS DE LA SEMANA
-        // --------------------------------------------------
 
         Row(
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(24.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
 
             listOf(
@@ -139,12 +405,8 @@ fun AgendaScreen() {
         }
 
         Spacer(
-            modifier = Modifier.height(8.dp)
+            modifier = Modifier.height(2.dp)
         )
-
-        // --------------------------------------------------
-        // CUADRÍCULA DEL CALENDARIO
-        // --------------------------------------------------
 
         Column(
             modifier = Modifier
@@ -166,7 +428,8 @@ fun AgendaScreen() {
                             dayString.toIntOrNull()
 
                         val hasAppointment =
-                            day != null && day in appointmentDays
+                            day != null &&
+                                    day in appointmentDays
 
                         Box(
                             modifier = Modifier
@@ -195,16 +458,19 @@ fun AgendaScreen() {
                                 ) {
 
                                     if (day != null) {
+
                                         onDaySelected(
                                             day = day,
-                                            appointmentDays = appointmentDays,
+                                            appointmentDays =
+                                                appointmentDays,
                                             onSelect = {
                                                 selectedDay = it
                                             }
                                         )
                                     }
                                 },
-                            contentAlignment = Alignment.TopStart
+                            contentAlignment =
+                                Alignment.TopStart
                         ) {
 
                             if (day != null) {
@@ -212,20 +478,21 @@ fun AgendaScreen() {
                                 Column(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .padding(8.dp)
+                                        .padding(6.dp)
                                 ) {
 
                                     Text(
                                         text = day.toString(),
                                         style = MaterialTheme
                                             .typography
-                                            .bodyMedium
+                                            .bodySmall
                                     )
 
                                     if (hasAppointment) {
 
                                         Spacer(
-                                            modifier = Modifier.height(6.dp)
+                                            modifier = Modifier
+                                                .height(3.dp)
                                         )
 
                                         Text(
@@ -242,11 +509,276 @@ fun AgendaScreen() {
                 }
             }
         }
+
+        Spacer(
+            modifier = Modifier.height(6.dp)
+        )
+
+        Button(
+            onClick = {
+                println("Agregar recordatorio")
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(44.dp)
+        ) {
+
+            Text(
+                text = "+ Agregar recordatorio",
+                fontSize = 13.sp
+            )
+        }
     }
 
-    // --------------------------------------------------
-    // VENTANA DE DETALLES
-    // --------------------------------------------------
+    if (showFilterSheet) {
+
+        val sheetState =
+            rememberModalBottomSheetState(
+                skipPartiallyExpanded = false
+            )
+
+        ModalBottomSheet(
+            onDismissRequest = {
+                showFilterSheet = false
+            },
+            sheetState = sheetState,
+            containerColor = Color.White,
+            scrimColor = Color.Black.copy(
+                alpha = 0.10f
+            )
+        ) {
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        color = Color.White,
+                        shape = RoundedCornerShape(
+                            topStart = 24.dp,
+                            topEnd = 24.dp
+                        )
+                    )
+                    .padding(
+                        start = 20.dp,
+                        end = 20.dp,
+                        top = 8.dp,
+                        bottom = 28.dp
+                    )
+            ) {
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement =
+                        Arrangement.Start
+                ) {
+
+                    IconButton(
+                        onClick = {
+                            showFilterSheet = false
+                        }
+                    ) {
+
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Cerrar filtros"
+                        )
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment =
+                        Alignment.CenterVertically
+                ) {
+
+                    Text(
+                        text = "Filtro",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme
+                            .typography
+                            .titleMedium
+                    )
+
+                    TextButton(
+                        onClick = {
+                            selectedFilters = emptySet()
+                        }
+                    ) {
+
+                        Text(
+                            text = "Limpiar",
+                            color = Color.Red
+                        )
+                    }
+                }
+
+                Spacer(
+                    modifier = Modifier.height(2.dp)
+                )
+
+                Text(
+                    text = "Tipo",
+                    style = MaterialTheme
+                        .typography
+                        .titleSmall
+                )
+
+                Spacer(
+                    modifier = Modifier.height(8.dp)
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(
+                            rememberScrollState()
+                        ),
+                    horizontalArrangement =
+                        Arrangement.spacedBy(8.dp),
+                    verticalAlignment =
+                        Alignment.CenterVertically
+                ) {
+
+                    FilterChip(
+                        selected =
+                            "Tratamiento" in selectedFilters,
+                        onClick = {
+
+                            selectedFilters =
+                                toggleFilter(
+                                    selectedFilters,
+                                    "Tratamiento"
+                                )
+                        },
+                        label = {
+
+                            Text(
+                                text = "Tratamiento",
+                                maxLines = 1,
+                                softWrap = false,
+                                fontSize = 12.sp,
+                                color = Color.White
+                            )
+                        },
+                        modifier = Modifier.width(112.dp),
+                        colors =
+                            androidx.compose.material3.FilterChipDefaults
+                                .filterChipColors(
+                                    containerColor =
+                                        filterColor,
+                                    labelColor =
+                                        Color.White,
+                                    selectedContainerColor =
+                                        filterColor,
+                                    selectedLabelColor =
+                                        Color.White
+                                )
+                    )
+
+                    FilterChip(
+                        selected =
+                            "Vacuna" in selectedFilters,
+                        onClick = {
+
+                            selectedFilters =
+                                toggleFilter(
+                                    selectedFilters,
+                                    "Vacuna"
+                                )
+                        },
+                        label = {
+
+                            Text(
+                                text = "Vacuna",
+                                maxLines = 1,
+                                softWrap = false,
+                                fontSize = 12.sp,
+                                color = Color.White
+                            )
+                        },
+                        modifier = Modifier.width(82.dp),
+                        colors =
+                            androidx.compose.material3.FilterChipDefaults
+                                .filterChipColors(
+                                    containerColor =
+                                        filterColor,
+                                    labelColor =
+                                        Color.White,
+                                    selectedContainerColor =
+                                        filterColor,
+                                    selectedLabelColor =
+                                        Color.White
+                                )
+                    )
+
+                    FilterChip(
+                        selected =
+                            "Cita médica" in selectedFilters,
+                        onClick = {
+
+                            selectedFilters =
+                                toggleFilter(
+                                    selectedFilters,
+                                    "Cita médica"
+                                )
+                        },
+                        label = {
+
+                            Text(
+                                text = "Cita médica",
+                                maxLines = 1,
+                                softWrap = false,
+                                fontSize = 12.sp,
+                                color = Color.White
+                            )
+                        },
+                        modifier = Modifier.width(105.dp),
+                        colors =
+                            androidx.compose.material3.FilterChipDefaults
+                                .filterChipColors(
+                                    containerColor =
+                                        filterColor,
+                                    labelColor =
+                                        Color.White,
+                                    selectedContainerColor =
+                                        filterColor,
+                                    selectedLabelColor =
+                                        Color.White
+                                )
+                    )
+                }
+
+                Spacer(
+                    modifier = Modifier.height(32.dp)
+                )
+
+                Button(
+                    onClick = {
+
+                        println(
+                            "Filtros seleccionados: $selectedFilters"
+                        )
+
+                        showFilterSheet = false
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor =
+                            MaterialTheme.colorScheme.primary,
+                        contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+
+                    Text(
+                        text = "Aplicar"
+                    )
+                }
+            }
+        }
+    }
 
     selectedDay?.let { day ->
 
@@ -291,18 +823,21 @@ fun AgendaScreen() {
                 selectedDay = null
             },
 
-            // TÍTULO + X
             title = {
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    horizontalArrangement =
+                        Arrangement.SpaceBetween,
+                    verticalAlignment =
+                        Alignment.CenterVertically
                 ) {
 
                     Text(
                         text = "Detalles de la consulta",
-                        style = MaterialTheme.typography.titleLarge
+                        style = MaterialTheme
+                            .typography
+                            .titleLarge
                     )
 
                     IconButton(
@@ -312,14 +847,15 @@ fun AgendaScreen() {
                     ) {
 
                         Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Cerrar"
+                            imageVector =
+                                Icons.Default.Close,
+                            contentDescription =
+                                "Cerrar"
                         )
                     }
                 }
             },
 
-            // INFORMACIÓN
             text = {
 
                 Column {
@@ -333,7 +869,8 @@ fun AgendaScreen() {
                     )
 
                     Text(
-                        text = "Veterinario: $veterinarian"
+                        text =
+                            "Veterinario: $veterinarian"
                     )
 
                     Spacer(
@@ -341,7 +878,8 @@ fun AgendaScreen() {
                     )
 
                     Text(
-                        text = "Tipo de consulta: $consultation"
+                        text =
+                            "Tipo de consulta: $consultation"
                     )
 
                     Spacer(
@@ -349,7 +887,8 @@ fun AgendaScreen() {
                     )
 
                     Text(
-                        text = "Fecha y hora: $dateTime"
+                        text =
+                            "Fecha y hora: $dateTime"
                     )
 
                     Spacer(
@@ -357,7 +896,8 @@ fun AgendaScreen() {
                     )
 
                     Text(
-                        text = "Lugar: Clínica Veterinaria PetLove"
+                        text =
+                            "Lugar: Clínica Veterinaria PetLove"
                     )
 
                     Spacer(
@@ -365,12 +905,12 @@ fun AgendaScreen() {
                     )
 
                     Text(
-                        text = "Valor a pagar: $price"
+                        text =
+                            "Valor a pagar: $price"
                     )
                 }
             },
 
-            // REAGENDAR
             confirmButton = {
 
                 Button(
@@ -388,7 +928,6 @@ fun AgendaScreen() {
                 }
             },
 
-            // ANULAR
             dismissButton = {
 
                 TextButton(
@@ -409,11 +948,6 @@ fun AgendaScreen() {
     }
 }
 
-
-// --------------------------------------------------
-// FUNCIÓN PARA SELECCIONAR UN DÍA
-// --------------------------------------------------
-
 fun onDaySelected(
     day: Int,
     appointmentDays: Set<Int>,
@@ -422,5 +956,17 @@ fun onDaySelected(
 
     if (day in appointmentDays) {
         onSelect(day)
+    }
+}
+
+fun toggleFilter(
+    currentFilters: Set<String>,
+    filter: String
+): Set<String> {
+
+    return if (filter in currentFilters) {
+        currentFilters - filter
+    } else {
+        currentFilters + filter
     }
 }
