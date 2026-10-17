@@ -55,14 +55,31 @@ import java.util.Calendar
 fun AgregarExamenMedicoScreen(
     onBackClick: () -> Unit = {},
     onAgregarClick: (String, String, String, String) -> Unit = { _, _, _, _ -> },
-    onCancelarClick: () -> Unit = {}
+    onCancelarClick: () -> Unit = {},
+    examenInicial: String = "",
+    tipoInicial: String = "",
+    clinicaInicial: String = "",
+    fechaInicial: String = "",
+    esEdicion: Boolean = false
 ) {
-    var examen by remember { mutableStateOf("") }
-    var tipo by remember { mutableStateOf("") }
-    var clinica by remember { mutableStateOf("") }
-    var fecha by remember { mutableStateOf("") }
-    var mostrarError by remember { mutableStateOf(false) }
-    var archivoAdjunto by remember { mutableStateOf("") }
+    var examen by remember(examenInicial) {
+        mutableStateOf(examenInicial)
+    }
+    var tipo by remember(tipoInicial) {
+        mutableStateOf(tipoInicial)
+    }
+    var clinica by remember(clinicaInicial) {
+        mutableStateOf(clinicaInicial)
+    }
+    var fecha by remember(fechaInicial) {
+        mutableStateOf(fechaInicial)
+    }
+    var mostrarError by remember {
+        mutableStateOf(false)
+    }
+    var archivoAdjunto by remember {
+        mutableStateOf("")
+    }
 
     val context = androidx.compose.ui.platform.LocalContext.current
     val calendario = remember { Calendar.getInstance() }
@@ -78,7 +95,9 @@ fun AgregarExamenMedicoScreen(
         }
     }
 
-    Scaffold(containerColor = Color.White) { paddingValues ->
+    Scaffold(
+        containerColor = Color.White
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -116,7 +135,11 @@ fun AgregarExamenMedicoScreen(
             Spacer(Modifier.height(8.dp))
 
             Text(
-                text = "Agregar examen médico",
+                text = if (esEdicion) {
+                    "Editar examen médico"
+                } else {
+                    "Agregar examen médico"
+                },
                 style = MaterialTheme.typography.titleMedium,
                 color = Color.Black,
                 fontWeight = FontWeight.Medium
@@ -125,49 +148,58 @@ fun AgregarExamenMedicoScreen(
             Spacer(Modifier.height(20.dp))
 
             Text(
-                "Examen",
+                text = "Examen",
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.Black
             )
             Spacer(Modifier.height(8.dp))
             CampoExamenMedico(
-                examen,
-                { examen = it; mostrarError = false },
-                "Nombre del examen"
+                valor = examen,
+                alCambiar = {
+                    examen = it
+                    mostrarError = false
+                },
+                placeholder = "Nombre del examen"
             )
 
             Spacer(Modifier.height(16.dp))
 
             Text(
-                "Tipo",
+                text = "Tipo",
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.Black
             )
             Spacer(Modifier.height(8.dp))
             CampoExamenMedico(
-                tipo,
-                { tipo = it; mostrarError = false },
-                "Tipo de examen"
+                valor = tipo,
+                alCambiar = {
+                    tipo = it
+                    mostrarError = false
+                },
+                placeholder = "Tipo de examen"
             )
 
             Spacer(Modifier.height(16.dp))
 
             Text(
-                "Clínica",
+                text = "Clínica",
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.Black
             )
             Spacer(Modifier.height(8.dp))
             CampoExamenMedico(
-                clinica,
-                { clinica = it; mostrarError = false },
-                "Nombre de la clínica"
+                valor = clinica,
+                alCambiar = {
+                    clinica = it
+                    mostrarError = false
+                },
+                placeholder = "Nombre de la clínica"
             )
 
             Spacer(Modifier.height(16.dp))
 
             Text(
-                "Fecha",
+                text = "Fecha",
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.Black
             )
@@ -297,7 +329,7 @@ fun AgregarExamenMedicoScreen(
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Text(
-                        "Cancelar",
+                        text = "Cancelar",
                         color = Color.Black,
                         fontSize = 14.sp,
                         maxLines = 1
@@ -332,7 +364,11 @@ fun AgregarExamenMedicoScreen(
                     )
                 ) {
                     Text(
-                        "Agregar",
+                        text = if (esEdicion) {
+                            "Guardar cambios"
+                        } else {
+                            "Agregar"
+                        },
                         color = Color.White,
                         fontSize = 14.sp,
                         maxLines = 1

@@ -37,7 +37,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -50,30 +49,45 @@ import androidx.compose.ui.unit.dp
 data class ExamenMedico(
     val id: Long = System.nanoTime(),
     val nombre: String,
+    val tipo: String,
     val fecha: String,
-    val centro: String,
-    val descripcion: String
+    val centro: String
 )
 
 @Composable
 fun ExamenesMedicosScreen(
+    examenes: List<ExamenMedico>,
     onBackClick: () -> Unit = {},
-    onAgregarClick: () -> Unit = {}
+    onAgregarClick: () -> Unit = {},
+    onEliminarClick: (Long) -> Unit = {}
 ) {
-    val examenes = remember {
-        mutableStateListOf<ExamenMedico>()
-    }
-
     var busqueda by remember { mutableStateOf("") }
+    var mostrarFiltros by remember { mutableStateOf(false) }
+    var filtro by remember { mutableStateOf("Todos") }
     var menuId by remember { mutableStateOf<Long?>(null) }
     var examenEliminar by remember { mutableStateOf<ExamenMedico?>(null) }
     var examenDetalle by remember { mutableStateOf<ExamenMedico?>(null) }
 
-    val filtrados = examenes.filter {
-        it.nombre.contains(busqueda, true) ||
-                it.centro.contains(busqueda, true) ||
-                it.fecha.contains(busqueda, true) ||
-                it.descripcion.contains(busqueda, true)
+    val filtrados = examenes.filter { examen ->
+        val coincideBusqueda =
+            examen.nombre.contains(busqueda, ignoreCase = true) ||
+                    examen.tipo.contains(busqueda, ignoreCase = true) ||
+                    examen.centro.contains(busqueda, ignoreCase = true) ||
+                    examen.fecha.contains(busqueda, ignoreCase = true)
+
+        val coincideFiltro = when (filtro) {
+            "Tipo de examen" ->
+                examen.tipo.contains(busqueda, ignoreCase = true) ||
+                        busqueda.isBlank()
+
+            "Clínica" ->
+                examen.centro.contains(busqueda, ignoreCase = true) ||
+                        busqueda.isBlank()
+
+            else -> true
+        }
+
+        coincideBusqueda && coincideFiltro
     }
 
     Scaffold(
@@ -97,17 +111,17 @@ fun ExamenesMedicosScreen(
                     modifier = Modifier.size(36.dp)
                 ) {
                     Icon(
-                        Icons.Default.Close,
+                        imageVector = Icons.Default.Close,
                         contentDescription = "Volver"
                     )
                 }
 
                 Box(
-                    Modifier.weight(1f),
+                    modifier = Modifier.weight(1f),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        "Exámenes médicos",
+                        text = "Exámenes médicos",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -118,7 +132,7 @@ fun ExamenesMedicosScreen(
                     modifier = Modifier.size(36.dp)
                 ) {
                     Icon(
-                        Icons.Default.Add,
+                        imageVector = Icons.Default.Add,
                         contentDescription = "Agregar examen"
                     )
                 }
@@ -135,10 +149,12 @@ fun ExamenesMedicosScreen(
                     value = busqueda,
                     onValueChange = { busqueda = it },
                     modifier = Modifier.weight(1f),
-                    placeholder = { Text("Buscar examen") },
+                    placeholder = {
+                        Text("Buscar examen")
+                    },
                     leadingIcon = {
                         Icon(
-                            Icons.Default.Search,
+                            imageVector = Icons.Default.Search,
                             contentDescription = "Buscar"
                         )
                     },
@@ -146,31 +162,59 @@ fun ExamenesMedicosScreen(
                     shape = RoundedCornerShape(12.dp)
                 )
 
-                Surface(
-                    modifier = Modifier.size(52.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(
-                        1.dp,
-                        MaterialTheme.colorScheme.outlineVariant
-                    ),
-                    color = Color.White
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            Icons.Default.Tune,
-                            contentDescription = "Filtros"
+                Box {
+                    Surface(
+                        modifier = Modifier.size(52.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(
+                            1.dp,
+                            MaterialTheme.colorScheme.outlineVariant
+                        ),
+                        color = Color.White,
+                        onClick = {
+                            mostrarFiltros = true
+                        }
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.Tune,
+                                contentDescription = "Filtros"
+                            )
+                        }
+                    }
+
+                    DropdownMenu(
+                        expanded = mostrarFiltros,
+                        onDismissRequest = {
+                            mostrarFiltros = false
+                        }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Todos") },
+                            onClick = {
+                                filtro = "Todos"
+                                mostrarFiltros = false
+                            }
+                        )
+
+                        DropdownMenuItem(
+                            text = { Text("Tipo de examen") },
+                            onClick = {
+                                filtro = "Tipo de examen"
+                                mostrarFiltros = false
+                            }
+                        )
+
+                        DropdownMenuItem(
+                            text = { Text("Clínica") },
+                            onClick = {
+                                filtro = "Clínica"
+                                mostrarFiltros = false
+                            }
                         )
                     }
                 }
             }
-
-            Spacer(Modifier.height(18.dp))
-
-            Text(
-                "Exámenes médicos",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
 
             Spacer(Modifier.height(12.dp))
 
@@ -182,7 +226,7 @@ fun ExamenesMedicosScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        if (busqueda.isBlank()) {
+                        text = if (examenes.isEmpty()) {
                             "Todavía no hay exámenes registrados."
                         } else {
                             "No se encontraron exámenes."
@@ -195,7 +239,10 @@ fun ExamenesMedicosScreen(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(filtrados, key = { it.id }) { examen ->
+                    items(
+                        items = filtrados,
+                        key = { it.id }
+                    ) { examen ->
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
@@ -209,24 +256,20 @@ fun ExamenesMedicosScreen(
                             elevation = CardDefaults.cardElevation(0.dp)
                         ) {
                             Column(
-                                Modifier.padding(14.dp)
+                                modifier = Modifier.padding(14.dp)
                             ) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Column(
-                                        Modifier.weight(1f)
+                                        modifier = Modifier.weight(1f)
                                     ) {
                                         Text(
-                                            examen.nombre,
+                                            text = examen.nombre,
                                             style = MaterialTheme.typography.titleSmall,
                                             fontWeight = FontWeight.SemiBold
                                         )
-
-                                        Spacer(Modifier.height(5.dp))
-
-                                        Text(examen.descripcion)
                                     }
 
                                     Box {
@@ -236,7 +279,7 @@ fun ExamenesMedicosScreen(
                                             }
                                         ) {
                                             Icon(
-                                                Icons.Default.MoreVert,
+                                                imageVector = Icons.Default.MoreVert,
                                                 contentDescription = "Opciones"
                                             )
                                         }
@@ -270,18 +313,25 @@ fun ExamenesMedicosScreen(
                                     }
                                 }
 
-                                Spacer(Modifier.height(10.dp))
+                                Spacer(Modifier.height(8.dp))
 
                                 Text(
-                                    "Centro: ${examen.centro}",
-                                    style = MaterialTheme.typography.bodySmall
+                                    text = "Tipo de examen: ${examen.tipo}",
+                                    style = MaterialTheme.typography.bodyMedium
                                 )
 
                                 Spacer(Modifier.height(4.dp))
 
                                 Text(
-                                    "Fecha: ${examen.fecha}",
-                                    style = MaterialTheme.typography.bodySmall
+                                    text = "Fecha: ${examen.fecha}",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+
+                                Spacer(Modifier.height(4.dp))
+
+                                Text(
+                                    text = "Nombre de la clínica: ${examen.centro}",
+                                    style = MaterialTheme.typography.bodyMedium
                                 )
                             }
                         }
@@ -304,9 +354,9 @@ fun ExamenesMedicosScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text("Examen: ${examen.nombre}")
+                    Text("Tipo de examen: ${examen.tipo}")
                     Text("Fecha: ${examen.fecha}")
-                    Text("Centro médico: ${examen.centro}")
-                    Text("Descripción: ${examen.descripcion}")
+                    Text("Nombre de la clínica: ${examen.centro}")
                 }
             },
             confirmButton = {
@@ -335,9 +385,7 @@ fun ExamenesMedicosScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        examenes.removeAll {
-                            it.id == examen.id
-                        }
+                        onEliminarClick(examen.id)
                         examenEliminar = null
                     }
                 ) {

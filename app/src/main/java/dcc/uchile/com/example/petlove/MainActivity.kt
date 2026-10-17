@@ -69,6 +69,10 @@ fun PetLoveApp() {
         mutableStateListOf<RegistroHistorial>()
     }
 
+    val examenesMedicos = remember {
+        mutableStateListOf<ExamenMedico>()
+    }
+
     val rutasMascotas = listOf(
         "mascotas",
         "registrar_mascota",
@@ -79,6 +83,7 @@ fun PetLoveApp() {
         "recordatorios",
         "examenes_medicos",
         "agregar_examen_medico",
+        "registro_vacunas",
         "detalle_historial_medico/{registroId}",
         "editar_historial_medico/{registroId}"
     )
@@ -265,17 +270,35 @@ fun PetLoveApp() {
                     },
                     onExamenesClick = {
                         navController.navigate("examenes_medicos")
+                    },
+                    onVacunasClick = {
+                        navController.navigate("registro_vacunas")
+                    }
+                )
+            }
+
+            composable("registro_vacunas") {
+                RegistroVacunasScreen(
+                    onBackClick = {
+                        navController.popBackStack()
+                    },
+                    onAgregarClick = {
+                        navController.navigate("examenes_medicos")
                     }
                 )
             }
 
             composable("examenes_medicos") {
                 ExamenesMedicosScreen(
+                    examenes = examenesMedicos,
                     onBackClick = {
                         navController.popBackStack()
                     },
                     onAgregarClick = {
                         navController.navigate("agregar_examen_medico")
+                    },
+                    onEliminarClick = { id ->
+                        examenesMedicos.removeAll { it.id == id }
                     }
                 )
             }
@@ -288,7 +311,17 @@ fun PetLoveApp() {
                     onCancelarClick = {
                         navController.popBackStack()
                     },
-                    onAgregarClick = { _, _, _, _ ->
+                    onAgregarClick = { examen, tipo, clinica, fecha ->
+                        examenesMedicos.add(
+                            0,
+                            ExamenMedico(
+                                nombre = examen,
+                                tipo = tipo,
+                                fecha = fecha,
+                                centro = clinica
+                            )
+                        )
+
                         navController.popBackStack()
                     }
                 )
@@ -396,7 +429,6 @@ fun PetLoveApp() {
                     }
                 )
             ) { backStackEntry ->
-
                 val registroId =
                     backStackEntry.arguments?.getLong("registroId") ?: -1L
 
@@ -435,7 +467,6 @@ fun PetLoveApp() {
                     }
                 )
             ) { backStackEntry ->
-
                 val registroId =
                     backStackEntry.arguments?.getLong("registroId") ?: -1L
 
